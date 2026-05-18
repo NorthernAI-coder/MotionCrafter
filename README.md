@@ -15,7 +15,7 @@
   <a href="https://physicalvision.github.io/people/~chuanxia">Chuanxia Zheng</a><sup>1</sup></span>
   <br>
   <sup>1</sup> NTU </span> 
-  <sup>2</sup> ARC Lab, Tencent PCG </span> 
+  <sup>2</sup> Tencent ARC Lab </span> 
   <sup>3</sup> HKUST </span> 
   <sup>4</sup> CUHK(SZ) </span>
   <sup>5</sup> Monash University </span>
