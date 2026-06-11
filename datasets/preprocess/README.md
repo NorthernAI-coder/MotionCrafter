@@ -28,6 +28,33 @@ python run_preprocess.py \
   --splits train,test
 ```
 
+### Kubric requires an extra tracking step
+
+Kubric is different from the other datasets: before running `gen_kubric_video.py`,
+generate dense tracking files once with `preprocess_kubric.sh`.
+
+Edit the paths and GPU ids at the top of `preprocess_kubric.sh`, then run:
+
+```bash
+cd datasets/preprocess
+./preprocess_kubric.sh
+```
+
+The tracking step writes processed Kubric frames, camera files, and
+`*_dense_tracking_*.npy` files. For `SPLIT="validation"`, the output directory is
+`${PROCESSED_DIR}_val`.
+
+After that, run the normal Kubric video/HDF5 conversion with the processed tracking
+directory as input:
+
+```bash
+python run_preprocess.py \
+  --dataset kubric \
+  --data-dir /path/to/processed/kubric_val \
+  --output-dir /path/to/unnormed/Kubric_video \
+  --clip-length 18
+```
+
 ## 1) Common configuration via environment variables
 
 All `gen_*.py` scripts now support the same environment variables:
