@@ -1,13 +1,19 @@
-# Preprocess Scripts
+# Preprocess Scripts 🧰
 
-This folder contains dataset-specific scripts that convert raw datasets to MotionCrafter training format:
-- video clips: `*_rgb.mp4`
-- annotations: `*_data.hdf5`
-- index file: `meta_infos.txt`
+Welcome to the dataset prep room. ✨ The scripts in this folder turn raw datasets
+into the MotionCrafter format that training code expects:
 
-## 0) Unified launcher (recommended)
+- `*_rgb.mp4`: video clips
+- `*_data.hdf5`: geometry, camera, flow, mask, and point-map annotations
+- `meta_infos.txt`: the index file that tells the loader what exists
 
-Use one command to run a dataset-specific preprocess script:
+Most datasets walk through the same front door: run one `gen_*.py` script, get
+clips plus annotations, then normalize if needed. Kubric takes a small detour,
+called out below.
+
+## 0) The Fast Path 🚀
+
+Use the unified launcher when the dataset has a normal one-step preprocess flow:
 
 ```bash
 python run_preprocess.py \
@@ -18,7 +24,7 @@ python run_preprocess.py \
   --clip-length 150
 ```
 
-For scripts using multi-splits:
+Datasets with multiple splits can pass them as a comma-separated list:
 
 ```bash
 python run_preprocess.py \
@@ -28,24 +34,25 @@ python run_preprocess.py \
   --splits train,test
 ```
 
-### Kubric requires an extra tracking step
+## Kubric: The Two-Step Route 🧭
 
-Kubric is different from the other datasets: before running `gen_kubric_video.py`,
-generate dense tracking files once with `preprocess_kubric.sh`.
+Kubric is the special case. 🌟 Before `gen_kubric_video.py` can make MotionCrafter
+clips, it needs dense tracking files. Think of this as giving Kubric frames their
+motion passport first.
 
-Edit the paths and GPU ids at the top of `preprocess_kubric.sh`, then run:
+1. Edit the paths and GPU ids at the top of `preprocess_kubric.sh`.
+2. Generate dense tracking:
 
 ```bash
 cd datasets/preprocess
 ./preprocess_kubric.sh
 ```
 
-The tracking step writes processed Kubric frames, camera files, and
-`*_dense_tracking_*.npy` files. For `SPLIT="validation"`, the output directory is
-`${PROCESSED_DIR}_val`.
+This creates processed Kubric frame folders, camera files, and
+`*_dense_tracking_*.npy` files. If `SPLIT="validation"`, the tracking output goes
+to `${PROCESSED_DIR}_val`.
 
-After that, run the normal Kubric video/HDF5 conversion with the processed tracking
-directory as input:
+3. Convert that processed tracking directory into normal MotionCrafter clips:
 
 ```bash
 python run_preprocess.py \
@@ -55,21 +62,23 @@ python run_preprocess.py \
   --clip-length 18
 ```
 
-## 1) Common configuration via environment variables
+After this, Kubric rejoins the regular pipeline. ✅
 
-All `gen_*.py` scripts now support the same environment variables:
+## 1) Shared Knobs 🎛️
 
-- `MOTIONCRAFTER_DATA_DIR`: raw dataset root directory
-- `MOTIONCRAFTER_OUTPUT_DIR`: output directory for converted videos/hdf5
-- `MOTIONCRAFTER_CLIP_LENGTH`: frames per clip
+All `gen_*.py` scripts understand the same core environment variables:
 
-Optional variables used by some scripts:
+- `MOTIONCRAFTER_DATA_DIR`: raw or intermediate dataset root
+- `MOTIONCRAFTER_OUTPUT_DIR`: output directory for converted videos and HDF5 files
+- `MOTIONCRAFTER_CLIP_LENGTH`: frames per output clip
 
-- `MOTIONCRAFTER_SPLITS`: comma-separated split list (e.g. `train,test`)
-- `MOTIONCRAFTER_SPLIT`: single split name
-- `MOTIONCRAFTER_PROCESS_SCENE_FLOW`: `true/false` (Point Odyssey)
+Some scripts also listen to dataset-specific switches:
 
-### Example
+- `MOTIONCRAFTER_SPLITS`: comma-separated split list, such as `train,test`
+- `MOTIONCRAFTER_SPLIT`: one split name
+- `MOTIONCRAFTER_PROCESS_SCENE_FLOW`: `true` or `false` for Point Odyssey
+
+Example without the launcher:
 
 ```bash
 cd datasets/preprocess
@@ -80,9 +89,10 @@ MOTIONCRAFTER_CLIP_LENGTH=150 \
 python gen_spring_video.py
 ```
 
-## 2) Normalize generated datasets
+## 2) Normalize The Results 🧼
 
-`normalize_video_dataset.py` supports CLI arguments:
+Once the unnormalized datasets are built, `normalize_video_dataset.py` resizes and
+packs them into the normalized training layout:
 
 ```bash
 python normalize_video_dataset.py \
@@ -93,13 +103,15 @@ python normalize_video_dataset.py \
   --skip-existing
 ```
 
-If `--output-root` and `--output-dirs` are not provided, output defaults to:
-- replace `unnormed_datasets` with `tmp_datasets` in `data_dir`, or
-- `data_dir/normalized` when replacement is not possible.
+If `--output-root` and `--output-dirs` are omitted, output defaults to one of:
 
-## 3) Build latent meta file
+- the input path with `unnormed_datasets` replaced by `tmp_datasets`
+- `data_dir/normalized` when that replacement is not possible
 
-`preprocess_meta_file.py` generates latent `meta_infos.txt` from source meta files:
+## 3) Build The Latent Index 🗂️
+
+`preprocess_meta_file.py` creates the latent-side `meta_infos.txt` from generated
+source meta files:
 
 ```bash
 python preprocess_meta_file.py \
@@ -107,19 +119,19 @@ python preprocess_meta_file.py \
   --latent-dirs /path/to/latent/Spring /path/to/latent/GTA-SfM
 ```
 
-## 4) Notes
+## 4) Field Notes 📝
 
-- Most scripts assume CUDA is available for point map / flow computation.
-- Keep clip length consistent with your training setup.
-- Some datasets require dataset-specific directory structures exactly as expected by each script.
-- Common helper functions for env parsing and `meta_infos.txt` writing are in `preprocess_common.py`.
+- Most scripts expect CUDA for point maps or flow-heavy preprocessing.
+- Keep clip length aligned with the training config you plan to use.
+- Dataset folder layouts matter; each script expects its dataset's native shape.
+- Shared helpers for env parsing and `meta_infos.txt` writing live in `preprocess_common.py`.
 
-## 5) Dataset-specific dependencies
+## 5) Dataset-Specific Dependencies 🧩
 
-- Dynamic Replica: requires `pytorch3d`.
-- Virtual KITTI 2: requires `pandas`.
-- Scripts reading EXR files (e.g. IRS/Matrix City): require `OpenEXR` runtime support.
+- Dynamic Replica requires `pytorch3d`.
+- Virtual KITTI 2 requires `pandas`.
+- EXR-reading scripts, such as IRS or Matrix City, require `OpenEXR` runtime support.
 
 If `pip install -r requirements.txt` cannot install `pytorch3d` in your environment,
-install it separately by following the official PyTorch3D installation guide that matches
-your PyTorch and CUDA versions.
+install it separately using the official PyTorch3D instructions that match your
+PyTorch and CUDA versions.
